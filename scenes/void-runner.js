@@ -237,10 +237,17 @@ function hitsAt(obs, z) {
   const pr = PLAYER_SIZE * 0.45; // tight player hitbox
 
   if (obs.type === 0) {
-    // Diamond — use 50% of visual radius
-    const or = 48 * s * 0.5;
-    const dx = sx - player.x, dy = sy - player.y;
-    return dx * dx + dy * dy < (pr + or) * (pr + or);
+    // Diamond — Minkowski sum of two diamonds is a diamond.
+    // Player half-extents: w = SIZE*0.6*0.45, h = SIZE*0.45
+    // Obstacle half-extents: w = baseSize*0.6*0.5, h = baseSize*0.5
+    const obsSize = 48 * s;
+    const pw = PLAYER_SIZE * 0.6 * 0.45;
+    const ph = PLAYER_SIZE * 0.45;
+    const ow = obsSize * 0.6 * 0.5;
+    const oh = obsSize * 0.5;
+    const dx = Math.abs(sx - player.x);
+    const dy = Math.abs(sy - player.y);
+    return dx / (pw + ow) + dy / (ph + oh) <= 1;
   } else {
     // Bars — use 55% of visual size
     const isH = obs.type === 1;
