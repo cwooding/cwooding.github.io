@@ -22,6 +22,7 @@ let lastTime = 0;
 let plankton = [];
 let jellyfish = [];
 let waves = [];
+let lanternfish = [];
 
 function rand(min, max) { return min + Math.random() * (max - min); }
 function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
@@ -172,6 +173,90 @@ class Jellyfish {
   }
 }
 
+class Lanternfish {
+  constructor() {
+    this.x = rand(0, _canvas.width);
+    this.y = rand(50, _canvas.height - 50);
+    this.vx = rand(0.5, 1.5) * (Math.random() < 0.5 ? 1 : -1);
+    this.vy = rand(-0.2, 0.2);
+    this.bodyWidth = rand(12, 18);
+    this.bodyHeight = rand(6, 10);
+    this.brightness = 0.3;
+    this.lureOn = false;
+    this.lureTimer = rand(2000, 5000);
+    this.lureBlink = 0;
+    this.startleTimer = 0;
+    this.direction = this.vx > 0 ? 1 : -1;
+  }
+
+  startle(waveX, waveY) {
+    this.startleTimer = 1000;
+    this.lureBlink = 1000;
+    const dx = this.x - waveX;
+    const dy = this.y - waveY;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    this.vx = (dx / dist) * 3;
+    this.vy = (dy / dist) * 2;
+    this.direction = this.vx > 0 ? 1 : -1;
+  }
+
+  update(dt) {
+    this.lureTimer -= dt;
+    if (this.lureTimer <= 0) {
+      this.lureOn = !this.lureOn;
+      this.lureTimer = this.lureOn ? rand(200, 400) : rand(2000, 5000);
+    }
+
+    if (this.lureBlink > 0) {
+      this.lureBlink -= dt;
+      this.lureOn = Math.sin(this.lureBlink * 0.03) > 0;
+    }
+
+    if (this.startleTimer > 0) {
+      this.startleTimer -= dt;
+    } else {
+      if (Math.random() < 0.002) {
+        this.vx = rand(0.5, 1.5) * (Math.random() < 0.5 ? 1 : -1);
+        this.direction = this.vx > 0 ? 1 : -1;
+      }
+      this.vy += rand(-0.02, 0.02);
+    }
+
+    this.vx *= 0.995;
+    this.vy *= 0.99;
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.x < 0 || this.x > _canvas.width) {
+      this.vx *= -1;
+      this.direction *= -1;
+    }
+    if (this.y < 20 || this.y > _canvas.height - 20) this.vy *= -1;
+    this.x = Math.max(0, Math.min(_canvas.width, this.x));
+    this.y = Math.max(20, Math.min(_canvas.height - 20, this.y));
+  }
+
+  draw() {
+    const b = this.startleTimer > 0 ? 0.6 : 0.3;
+
+    drawGlow(this.x, this.y, 20, 255, 176, 64, b * 0.2);
+
+    _ctx.beginPath();
+    _ctx.ellipse(this.x, this.y, this.bodyWidth, this.bodyHeight, 0, 0, Math.PI * 2);
+    _ctx.fillStyle = `rgba(255, 176, 64, ${b * 0.5})`;
+    _ctx.fill();
+
+    if (this.lureOn) {
+      const lureX = this.x + this.direction * (this.bodyWidth + 6);
+      drawGlow(lureX, this.y - 3, 10, 255, 220, 100, 0.6);
+      _ctx.beginPath();
+      _ctx.arc(lureX, this.y - 3, 2, 0, Math.PI * 2);
+      _ctx.fillStyle = 'rgba(255, 255, 200, 0.9)';
+      _ctx.fill();
+    }
+  }
+}
+
 function animate(now) {
   const dt = lastTime ? Math.min(now - lastTime, 50) : 16;
   lastTime = now;
@@ -185,6 +270,7 @@ function animate(now) {
 
   plankton.forEach(p => { p.update(dt); p.draw(); });
   jellyfish.forEach(j => { j.update(dt); j.draw(); });
+  lanternfish.forEach(l => { l.update(dt); l.draw(); });
 
   _ctx.globalCompositeOperation = 'source-over';
   rafId = requestAnimationFrame(animate);
@@ -199,6 +285,7 @@ export function init(canvas, ctx, pointer) {
   plankton = Array.from({ length: CONFIG.planktonCount }, () => new Plankton());
   jellyfish = Array.from({ length: randInt(CONFIG.jellyfishMin, CONFIG.jellyfishMax) }, () => new Jellyfish());
   waves = [];
+  lanternfish = Array.from({ length: randInt(CONFIG.lanternfishMin, CONFIG.lanternfishMax) }, () => new Lanternfish());
   rafId = requestAnimationFrame(animate);
 }
 
@@ -208,6 +295,7 @@ export function destroy() {
   plankton = [];
   jellyfish = [];
   waves = [];
+  lanternfish = [];
 }
 
 export function onKey(e) {
