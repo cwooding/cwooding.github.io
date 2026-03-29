@@ -14,6 +14,7 @@ let speed = 0.001;        // z-units per ms (faster start)
 let spawnTimer = 0;
 let spawnInterval = 600; // ms (more frequent)
 let flashTimer = 0;       // white flash on death
+let deadCooldown = 0;     // ms before restart input accepted
 
 // ── Player ───────────────────────────────────────────────────────────────────
 const player = {
@@ -229,25 +230,29 @@ function drawObstacle(obs) {
 }
 
 // ── Collision ─────────────────────────────────────────────────────────────────
-// Use AABB for bars, circle for diamond. Apply 0.7 forgiveness factor.
-function checkCollision(obs) {
-  if (obs.z < -0.05 || obs.z > 0.05) return false;
-  const { sx, sy, s } = project(obs.wx, obs.wy, obs.z);
+// Swept check: if obstacle crossed z=0 this frame, test collision at z=0.
+// Also check current z if near the player plane. Prevents skipping at high speed.
+function checkCollision(obs, prevZ) {
+  // Did the obstacle cross or touch the player plane (z=0) this frame?
+  const crossedZero = prevZ >= 0 && obs.z <= 0;
+  const nearPlane = obs.z > -0.08 && obs.z < 0.08;
+  if (!crossedZero && !nearPlane) return false;
+
+  // Test at z=0 (player plane) for swept, or current z for near-plane
+  const testZ = crossedZero ? 0 : obs.z;
+  const { sx, sy, s } = project(obs.wx, obs.wy, testZ);
   const forgive = 0.7;
   const pr = PLAYER_SIZE * forgive;
 
   if (obs.type === 0) {
-    // Diamond: circle-circle
     const or = 48 * s * forgive;
     const dx = sx - player.x, dy = sy - player.y;
     return dx * dx + dy * dy < (pr + or) * (pr + or);
   } else if (obs.type === 1) {
-    // H-bar: AABB
     const hw = 48 * 3.2 * s * 0.5 * forgive;
     const hh = 48 * 0.7 * s * 0.5 * forgive;
     return Math.abs(player.x - sx) < hw + pr && Math.abs(player.y - sy) < hh + pr;
   } else {
-    // V-bar: AABB
     const hw = 48 * 0.7 * s * 0.5 * forgive;
     const hh = 48 * 3.2 * s * 0.5 * forgive;
     return Math.abs(player.x - sx) < hw + pr && Math.abs(player.y - sy) < hh + pr;
@@ -331,13 +336,16 @@ function loop(ts) {
   const dt = Math.min(rawDt > 200 ? 16 : rawDt, 50); // clamp; skip huge gaps
   pulseTime += dt / 1000;
 
+  // Dead cooldown
+  if (deadCooldown > 0) deadCooldown -= dt;
+
   // Touch/click state transitions (rising edge of pointer.down)
   const pointerTapped = _pointer.down && !prevPointerDown;
   prevPointerDown = _pointer.down;
   if (pointerTapped) {
     if (state === STATE.READY) {
       startGame();
-    } else if (state === STATE.DEAD && flashTimer <= 0) {
+    } else if (state === STATE.DEAD && deadCooldown <= 0) {
       state = STATE.READY;
     }
   }
@@ -428,14 +436,15 @@ function updateObstacles(dt) {
   // Move & cull
   for (let i = obstacles.length - 1; i >= 0; i--) {
     const obs = obstacles[i];
+    const prevZ = obs.z;
     obs.z -= speed * dt;
 
-    if (checkCollision(obs)) {
+    if (checkCollision(obs, prevZ)) {
       die();
       return;
     }
 
-    if (obs.z < -0.15) {
+    if (obs.z < -0.5) {
       obstacles.splice(i, 1);
     }
   }
@@ -456,6 +465,7 @@ function die() {
   }
   state = STATE.DEAD;
   flashTimer = 200;
+  deadCooldown = 800;
 }
 
 function startGame() {
@@ -505,7 +515,7 @@ export function onKey(e) {
   if (down) {
     if (state === STATE.READY) {
       startGame();
-    } else if (state === STATE.DEAD && flashTimer <= 0) {
+    } else if (state === STATE.DEAD && deadCooldown <= 0) {
       state = STATE.READY;
     }
   }

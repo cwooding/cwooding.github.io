@@ -11,6 +11,40 @@ const pointer = { x: -9999, y: -9999, down: false };
 let current = 0;
 let shakeCooldown = false;
 
+// Mobile scene-switch button (top-right corner)
+const BTN = { size: 36, margin: 12 };
+function btnX() { return canvas.width - BTN.size - BTN.margin; }
+function btnY() { return BTN.margin; }
+
+function drawSceneButton() {
+  const x = btnX(), y = btnY(), s = BTN.size;
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.fillRect(x, y, s, s);
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, s, s);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = 'bold 16px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('M', x + s / 2, y + s / 2);
+  ctx.restore();
+}
+
+function hitBtn(px, py) {
+  const x = btnX(), y = btnY(), s = BTN.size;
+  return px >= x && px <= x + s && py >= y && py <= y + s;
+}
+
+// Overlay the button after each frame
+function onFrame() {
+  drawSceneButton();
+  requestAnimationFrame(onFrame);
+}
+requestAnimationFrame(onFrame);
+
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -32,13 +66,19 @@ window.addEventListener('mouseleave', () => {
   pointer.y = -9999;
   pointer.down = false;
 });
-window.addEventListener('mousedown', () => { pointer.down = true; });
+window.addEventListener('mousedown', e => {
+  if (hitBtn(e.clientX, e.clientY)) { nextScene(); return; }
+  pointer.down = true;
+});
 window.addEventListener('mouseup', () => { pointer.down = false; });
 
 // Pointer — touch
 window.addEventListener('touchstart', e => {
-  pointer.x = e.touches[0].clientX;
-  pointer.y = e.touches[0].clientY;
+  const tx = e.touches[0].clientX;
+  const ty = e.touches[0].clientY;
+  if (hitBtn(tx, ty)) { nextScene(); return; }
+  pointer.x = tx;
+  pointer.y = ty;
   pointer.down = true;
 }, { passive: true });
 window.addEventListener('touchmove', e => {
