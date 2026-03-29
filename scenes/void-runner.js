@@ -10,9 +10,9 @@ let state = STATE.READY;
 
 let score = 0;
 let highScore = 0;
-let speed = 0.0008;       // z-units per ms
+let speed = 0.001;        // z-units per ms (faster start)
 let spawnTimer = 0;
-let spawnInterval = 800; // ms
+let spawnInterval = 600; // ms (more frequent)
 let flashTimer = 0;       // white flash on death
 
 // ── Player ───────────────────────────────────────────────────────────────────
@@ -21,12 +21,12 @@ const player = {
   tx: 0, ty: 0,         // target coords
   trail: [],            // [{x,y}] fading afterimages
 };
-const PLAYER_SPEED = 0.12; // lerp factor per frame (feels springy)
+const PLAYER_SPEED = 0.25; // lerp factor per frame (responsive)
 const PLAYER_SIZE = 18;
 
 // Arrow key state
 const keys = { left: false, right: false, up: false, down: false };
-const KEY_SPEED = 320; // px/s
+const KEY_SPEED = 480; // px/s
 
 // ── Obstacles ─────────────────────────────────────────────────────────────────
 // Each: { wx, wy, z, type }  wx/wy = world position relative to vanishing point
@@ -52,9 +52,9 @@ function project(wx, wy, z) {
 
 function reset() {
   score = 0;
-  speed = 0.0008;
+  speed = 0.001;
   spawnTimer = 0;
-  spawnInterval = 800;
+  spawnInterval = 600;
   obstacles.length = 0;
   player.trail.length = 0;
   player.tx = player.x;
@@ -62,16 +62,20 @@ function reset() {
 }
 
 function spawnObstacle() {
-  // world-space radius at z=1 maps to nothing visible; we need it to cover
-  // the play area when it reaches z=0.  Play area half-extents ≈ canvas * 0.4
-  const hw = _canvas.width * 0.4;
-  const hh = _canvas.height * 0.4;
-  obstacles.push({
-    wx: (Math.random() - 0.5) * hw * 2,
-    wy: (Math.random() - 0.5) * hh * 1.6,
-    z: 1.0,
-    type: Math.floor(Math.random() * OBS_TYPES),
-  });
+  // Bias toward player position so standing still isn't safe
+  const hw = _canvas.width * 0.3;
+  const hh = _canvas.height * 0.3;
+  // 60% of obstacles aim near the player, 40% random
+  let wx, wy;
+  if (Math.random() < 0.6) {
+    // Aim at player with some spread
+    wx = (player.x - vpX()) + (Math.random() - 0.5) * hw * 0.8;
+    wy = (player.y - vpY()) + (Math.random() - 0.5) * hh * 0.8;
+  } else {
+    wx = (Math.random() - 0.5) * hw * 2;
+    wy = (Math.random() - 0.5) * hh * 2;
+  }
+  obstacles.push({ wx, wy, z: 1.0, type: Math.floor(Math.random() * OBS_TYPES) });
 }
 
 // ── Draw tunnel background ────────────────────────────────────────────────────
@@ -162,7 +166,25 @@ function drawObstacle(obs) {
   _ctx.save();
   _ctx.globalCompositeOperation = 'lighter';
 
-  const baseSize = 28 * s;
+  // Approach line from vanishing point — shows trajectory
+  const lineAlpha = Math.min(s, 0.3) * 0.4;
+  if (lineAlpha > 0.01) {
+    const colors = ['#ff2244', '#ff8800', '#ffee00'];
+    _ctx.strokeStyle = colors[obs.type].replace(')', `,${lineAlpha.toFixed(2)})`).replace('rgb', 'rgba').replace('#', '');
+    // Use hex to rgba
+    const c = colors[obs.type];
+    const r = parseInt(c.slice(1, 3), 16);
+    const g = parseInt(c.slice(3, 5), 16);
+    const b = parseInt(c.slice(5, 7), 16);
+    _ctx.strokeStyle = `rgba(${r},${g},${b},${lineAlpha.toFixed(2)})`;
+    _ctx.lineWidth = 1;
+    _ctx.beginPath();
+    _ctx.moveTo(vpX(), vpY());
+    _ctx.lineTo(sx, sy);
+    _ctx.stroke();
+  }
+
+  const baseSize = 48 * s;
 
   if (obs.type === 0) {
     // Red diamond
@@ -216,18 +238,18 @@ function checkCollision(obs) {
 
   if (obs.type === 0) {
     // Diamond: circle-circle
-    const or = 28 * s * forgive;
+    const or = 48 * s * forgive;
     const dx = sx - player.x, dy = sy - player.y;
     return dx * dx + dy * dy < (pr + or) * (pr + or);
   } else if (obs.type === 1) {
     // H-bar: AABB
-    const hw = 28 * 3.2 * s * 0.5 * forgive;
-    const hh = 28 * 0.7 * s * 0.5 * forgive;
+    const hw = 48 * 3.2 * s * 0.5 * forgive;
+    const hh = 48 * 0.7 * s * 0.5 * forgive;
     return Math.abs(player.x - sx) < hw + pr && Math.abs(player.y - sy) < hh + pr;
   } else {
     // V-bar: AABB
-    const hw = 28 * 0.7 * s * 0.5 * forgive;
-    const hh = 28 * 3.2 * s * 0.5 * forgive;
+    const hw = 48 * 0.7 * s * 0.5 * forgive;
+    const hh = 48 * 3.2 * s * 0.5 * forgive;
     return Math.abs(player.x - sx) < hw + pr && Math.abs(player.y - sy) < hh + pr;
   }
 }
@@ -391,10 +413,10 @@ function updateObstacles(dt) {
   // Speed ramp
   const speedSec = dt / 1000;
   speed = Math.min(speed + 0.00001 * speedSec, 0.002);
-  spawnInterval = Math.max(200, 800 - (speed - 0.0008) / 0.0000012 * 0.6);
+  spawnInterval = Math.max(200, 600 - (speed - 0.001) / 0.000001 * 0.4);
 
   // Score
-  score += speedSec * (speed / 0.0008) * 60;
+  score += speedSec * (speed / 0.001) * 60;
 
   // Spawn
   spawnTimer -= dt;
@@ -423,7 +445,7 @@ function drawObstacles() {
   // Draw back-to-front (largest z first = furthest back)
   const sorted = obstacles.slice().sort((a, b) => b.z - a.z);
   for (const obs of sorted) {
-    if (obs.z < 0.98) drawObstacle(obs);
+    if (obs.z < 0.995) drawObstacle(obs);
   }
 }
 

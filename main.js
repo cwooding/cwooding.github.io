@@ -59,6 +59,9 @@ window.addEventListener('keydown', e => {
     SCENES[current].onKey?.(e);
   }
 });
+window.addEventListener('keyup', e => {
+  SCENES[current].onKey?.(e);
+});
 
 // Scene switching — shake
 window.addEventListener('devicemotion', e => {
