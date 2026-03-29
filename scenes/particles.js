@@ -100,6 +100,7 @@ function animate() {
 }
 
 export function init(canvas, ctx, pointer) {
+  if (rafId !== null) cancelAnimationFrame(rafId);
   _canvas = canvas;
   _ctx = ctx;
   _pointer = pointer;
