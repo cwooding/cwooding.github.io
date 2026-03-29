@@ -203,11 +203,12 @@ class Jellyfish {
       this.brightness = 0.3 + pulse * 0.2;
     }
 
-    if (pulse > 0.7) this.vy -= 0.02;
-    this.vy += 0.005;
+    if (pulse > 0.7) this.vy -= 0.015;
+    if (pulse < 0.3) this.vy += 0.01;
+    this.vy += 0.008;
     this.vx += rand(-0.01, 0.01);
-    this.vx *= 0.99;
-    this.vy *= 0.99;
+    this.vx *= 0.98;
+    this.vy *= 0.98;
     this.x += this.vx;
     this.y += this.vy;
 
