@@ -230,33 +230,38 @@ function drawObstacle(obs) {
 }
 
 // ── Collision ─────────────────────────────────────────────────────────────────
-// Swept check: if obstacle crossed z=0 this frame, test collision at z=0.
-// Also check current z if near the player plane. Prevents skipping at high speed.
-function checkCollision(obs, prevZ) {
-  // Did the obstacle cross or touch the player plane (z=0) this frame?
-  const crossedZero = prevZ >= 0 && obs.z <= 0;
-  const nearPlane = obs.z > -0.08 && obs.z < 0.08;
-  if (!crossedZero && !nearPlane) return false;
-
-  // Test at z=0 (player plane) for swept, or current z for near-plane
-  const testZ = crossedZero ? 0 : obs.z;
-  const { sx, sy, s } = project(obs.wx, obs.wy, testZ);
-  const forgive = 0.7;
-  const pr = PLAYER_SIZE * forgive;
+// Sample multiple z-values between prevZ and obs.z to prevent tunneling.
+function hitsAt(obs, z) {
+  const { sx, sy, s } = project(obs.wx, obs.wy, z);
+  if (s <= 0) return false;
+  const pr = PLAYER_SIZE * 0.7;
 
   if (obs.type === 0) {
-    const or = 48 * s * forgive;
+    const or = 48 * s * 0.7;
     const dx = sx - player.x, dy = sy - player.y;
     return dx * dx + dy * dy < (pr + or) * (pr + or);
-  } else if (obs.type === 1) {
-    const hw = 48 * 3.2 * s * 0.5 * forgive;
-    const hh = 48 * 0.7 * s * 0.5 * forgive;
-    return Math.abs(player.x - sx) < hw + pr && Math.abs(player.y - sy) < hh + pr;
   } else {
-    const hw = 48 * 0.7 * s * 0.5 * forgive;
-    const hh = 48 * 3.2 * s * 0.5 * forgive;
+    const isH = obs.type === 1;
+    const hw = 48 * (isH ? 3.2 : 0.7) * s * 0.5 * 0.7;
+    const hh = 48 * (isH ? 0.7 : 3.2) * s * 0.5 * 0.7;
     return Math.abs(player.x - sx) < hw + pr && Math.abs(player.y - sy) < hh + pr;
   }
+}
+
+function checkCollision(obs, prevZ) {
+  // Only check obstacles in the danger zone
+  if (obs.z > 0.15 && prevZ > 0.15) return false;
+  if (obs.z < -0.15 && prevZ < -0.15) return false;
+
+  // Sample along the path — more samples for bigger z steps
+  const dz = Math.abs(prevZ - obs.z);
+  const steps = Math.max(2, Math.ceil(dz / 0.02));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const z = prevZ + (obs.z - prevZ) * t;
+    if (hitsAt(obs, z)) return true;
+  }
+  return false;
 }
 
 // ── HUD & screens ─────────────────────────────────────────────────────────────
