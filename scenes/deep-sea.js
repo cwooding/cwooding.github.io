@@ -23,9 +23,37 @@ let plankton = [];
 let jellyfish = [];
 let waves = [];
 let lanternfish = [];
+let prevPointerDown = false;
 
 function rand(min, max) { return min + Math.random() * (max - min); }
 function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+class Wave {
+  constructor(x, y, maxRadius, duration) {
+    this.x = x;
+    this.y = y;
+    this.maxRadius = maxRadius;
+    this.duration = duration;
+    this.elapsed = 0;
+    this.active = true;
+  }
+
+  update(dt) {
+    this.elapsed += dt;
+    if (this.elapsed >= this.duration) this.active = false;
+  }
+
+  get radius() {
+    return this.maxRadius * Math.min(this.elapsed / this.duration, 1);
+  }
+
+  hits(x, y) {
+    if (!this.active) return false;
+    const dist = Math.sqrt((x - this.x) ** 2 + (y - this.y) ** 2);
+    const r = this.radius;
+    return dist <= r && dist >= r - 30;
+  }
+}
 
 function drawGlow(x, y, radius, r, g, b, intensity) {
   const grad = _ctx.createRadialGradient(x, y, 0, x, y, radius);
@@ -105,6 +133,7 @@ class Jellyfish {
     this.startleTimer = 600;
     this.brightness = 1.0;
     this.pulsePhase = 0;
+    waves.push(new Wave(this.x, this.y, CONFIG.jellyWaveRadius, CONFIG.jellyWaveDuration));
   }
 
   update(dt) {
@@ -268,9 +297,34 @@ function animate(now) {
 
   _ctx.globalCompositeOperation = 'lighter';
 
-  plankton.forEach(p => { p.update(dt); p.draw(); });
-  jellyfish.forEach(j => { j.update(dt); j.draw(); });
-  lanternfish.forEach(l => { l.update(dt); l.draw(); });
+  // Spawn wave on click/tap
+  if (_pointer.down && !prevPointerDown && _pointer.x !== -9999) {
+    waves.push(new Wave(_pointer.x, _pointer.y, CONFIG.waveMaxRadius, CONFIG.waveDuration));
+  }
+  prevPointerDown = _pointer.down;
+
+  // Update waves
+  waves.forEach(w => w.update(dt));
+  waves = waves.filter(w => w.active);
+
+  // Update organisms — check wave hits
+  plankton.forEach(p => {
+    waves.forEach(w => { if (w.hits(p.x, p.y)) p.startle(w.x, w.y); });
+    p.update(dt);
+    p.draw();
+  });
+
+  jellyfish.forEach(j => {
+    waves.forEach(w => { if (w.hits(j.x, j.y)) j.startle(); });
+    j.update(dt);
+    j.draw();
+  });
+
+  lanternfish.forEach(l => {
+    waves.forEach(w => { if (w.hits(l.x, l.y)) l.startle(w.x, w.y); });
+    l.update(dt);
+    l.draw();
+  });
 
   _ctx.globalCompositeOperation = 'source-over';
   rafId = requestAnimationFrame(animate);
@@ -282,6 +336,7 @@ export function init(canvas, ctx, pointer) {
   _ctx = ctx;
   _pointer = pointer;
   lastTime = 0;
+  prevPointerDown = false;
   plankton = Array.from({ length: CONFIG.planktonCount }, () => new Plankton());
   jellyfish = Array.from({ length: randInt(CONFIG.jellyfishMin, CONFIG.jellyfishMax) }, () => new Jellyfish());
   waves = [];
