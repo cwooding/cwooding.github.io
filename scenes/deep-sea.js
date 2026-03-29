@@ -132,11 +132,34 @@ class Plankton {
   }
 
   draw() {
+    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    const angle = Math.atan2(this.vy, this.vx);
+    const s = this.radius;
+
     drawGlow(this.x, this.y, 14, this.r, this.g, this.b, this.brightness * 0.35);
-    _ctx.beginPath();
-    _ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+
+    _ctx.save();
+    _ctx.translate(this.x, this.y);
+    _ctx.rotate(angle);
     _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${this.brightness})`;
+
+    // Teardrop body
+    _ctx.beginPath();
+    _ctx.moveTo(s * 2, 0);
+    _ctx.quadraticCurveTo(s * 0.5, -s * 1.2, -s * 1.5, 0);
+    _ctx.quadraticCurveTo(s * 0.5, s * 1.2, s * 2, 0);
     _ctx.fill();
+
+    // Tail fin
+    _ctx.beginPath();
+    _ctx.moveTo(-s * 1.5, 0);
+    _ctx.lineTo(-s * 2.5, -s * 0.8);
+    _ctx.lineTo(-s * 2.5, s * 0.8);
+    _ctx.closePath();
+    _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${this.brightness * 0.7})`;
+    _ctx.fill();
+
+    _ctx.restore();
   }
 }
 
@@ -306,20 +329,59 @@ class Lanternfish {
 
   draw() {
     const b = this.startleTimer > 0 ? 0.6 : 0.3;
+    const d = this.direction;
+    const bw = this.bodyWidth;
+    const bh = this.bodyHeight;
 
-    drawGlow(this.x, this.y, 24, this.r, this.g, this.b, b * 0.25);
+    drawGlow(this.x, this.y, 28, this.r, this.g, this.b, b * 0.25);
 
+    _ctx.save();
+    _ctx.translate(this.x, this.y);
+    if (d < 0) _ctx.scale(-1, 1);
+
+    // Main body — tapered fish shape
     _ctx.beginPath();
-    _ctx.ellipse(this.x, this.y, this.bodyWidth, this.bodyHeight, 0, 0, Math.PI * 2);
+    _ctx.moveTo(bw, 0);
+    _ctx.bezierCurveTo(bw * 0.6, -bh, -bw * 0.4, -bh * 0.8, -bw, 0);
+    _ctx.bezierCurveTo(-bw * 0.4, bh * 0.8, bw * 0.6, bh, bw, 0);
     _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${b * 0.6})`;
     _ctx.fill();
 
+    // Tail fin
+    _ctx.beginPath();
+    _ctx.moveTo(-bw, 0);
+    _ctx.lineTo(-bw * 1.5, -bh * 0.9);
+    _ctx.quadraticCurveTo(-bw * 1.1, 0, -bw * 1.5, bh * 0.9);
+    _ctx.closePath();
+    _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${b * 0.5})`;
+    _ctx.fill();
+
+    // Dorsal fin
+    _ctx.beginPath();
+    _ctx.moveTo(bw * 0.2, -bh * 0.7);
+    _ctx.quadraticCurveTo(-bw * 0.1, -bh * 1.4, -bw * 0.5, -bh * 0.6);
+    _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${b * 0.4})`;
+    _ctx.fill();
+
+    // Eye
+    _ctx.beginPath();
+    _ctx.arc(bw * 0.55, -bh * 0.15, bh * 0.2, 0, Math.PI * 2);
+    _ctx.fillStyle = `rgba(255, 255, 255, ${b * 0.8})`;
+    _ctx.fill();
+    _ctx.beginPath();
+    _ctx.arc(bw * 0.58, -bh * 0.15, bh * 0.1, 0, Math.PI * 2);
+    _ctx.fillStyle = `rgba(0, 0, 0, ${b * 0.9})`;
+    _ctx.fill();
+
+    _ctx.restore();
+
+    // Lure (drawn in world space, offset from head)
     if (this.lureOn) {
-      const lureX = this.x + this.direction * (this.bodyWidth + 6);
-      drawGlow(lureX, this.y - 3, 10, 255, 220, 100, 0.6);
+      const lureX = this.x + d * (bw + 8);
+      drawGlow(lureX, this.y - 4, 12, 255, 220, 100, 0.7);
       _ctx.beginPath();
-      _ctx.arc(lureX, this.y - 3, 2, 0, Math.PI * 2);
-      _ctx.fillStyle = 'rgba(255, 255, 200, 0.9)';
+      _ctx.arc(lureX, this.y - 4, 2.5, 0, Math.PI * 2);
+      _ctx.fillStyle = 'rgba(255, 255, 200, 0.95)';
       _ctx.fill();
     }
   }
