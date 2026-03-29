@@ -4,7 +4,7 @@ const SCENES = [particles];
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-const pointer = { x: -9999, y: -9999 };
+const pointer = { x: -9999, y: -9999, down: false };
 
 let current = 0;
 let shakeCooldown = false;
@@ -29,11 +29,14 @@ window.addEventListener('mouseleave', () => {
   pointer.x = -9999;
   pointer.y = -9999;
 });
+window.addEventListener('mousedown', () => { pointer.down = true; });
+window.addEventListener('mouseup', () => { pointer.down = false; });
 
 // Pointer — touch
 window.addEventListener('touchstart', e => {
   pointer.x = e.touches[0].clientX;
   pointer.y = e.touches[0].clientY;
+  pointer.down = true;
 }, { passive: true });
 window.addEventListener('touchmove', e => {
   pointer.x = e.touches[0].clientX;
@@ -42,6 +45,7 @@ window.addEventListener('touchmove', e => {
 window.addEventListener('touchend', () => {
   pointer.x = -9999;
   pointer.y = -9999;
+  pointer.down = false;
 }, { passive: true });
 
 // Scene switching — M key; forward other keys to current scene
