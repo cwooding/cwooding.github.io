@@ -234,16 +234,18 @@ function drawObstacle(obs) {
 function hitsAt(obs, z) {
   const { sx, sy, s } = project(obs.wx, obs.wy, z);
   if (s <= 0) return false;
-  const pr = PLAYER_SIZE * 0.7;
+  const pr = PLAYER_SIZE * 0.45; // tight player hitbox
 
   if (obs.type === 0) {
-    const or = 48 * s * 0.7;
+    // Diamond — use 50% of visual radius
+    const or = 48 * s * 0.5;
     const dx = sx - player.x, dy = sy - player.y;
     return dx * dx + dy * dy < (pr + or) * (pr + or);
   } else {
+    // Bars — use 55% of visual size
     const isH = obs.type === 1;
-    const hw = 48 * (isH ? 3.2 : 0.7) * s * 0.5 * 0.7;
-    const hh = 48 * (isH ? 0.7 : 3.2) * s * 0.5 * 0.7;
+    const hw = 48 * (isH ? 3.2 : 0.7) * s * 0.5 * 0.55;
+    const hh = 48 * (isH ? 0.7 : 3.2) * s * 0.5 * 0.55;
     return Math.abs(player.x - sx) < hw + pr && Math.abs(player.y - sy) < hh + pr;
   }
 }
