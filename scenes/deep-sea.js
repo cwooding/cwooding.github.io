@@ -29,7 +29,9 @@ function rand(min, max) { return min + Math.random() * (max - min); }
 function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
 
 class Wave {
+  static _nextId = 0;
   constructor(x, y, maxRadius, duration) {
+    this.id = Wave._nextId++;
     this.x = x;
     this.y = y;
     this.maxRadius = maxRadius;
@@ -74,16 +76,38 @@ class Plankton {
     this.radius = rand(1, 2);
     this.brightness = 0.15;
     this.flashTimer = 0;
+    this._lastWaveId = -1;
   }
 
-  startle(waveX, waveY) {
+  startle(wave) {
+    if (wave.id === this._lastWaveId) return;
+    this._lastWaveId = wave.id;
     this.brightness = 0.9;
     this.flashTimer = 500;
-    const dx = this.x - waveX;
-    const dy = this.y - waveY;
+    const dx = this.x - wave.x;
+    const dy = this.y - wave.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
     this.vx += (dx / dist) * 2;
     this.vy += (dy / dist) * 2;
+  }
+
+  flock(neighbors) {
+    let avgVx = 0, avgVy = 0, count = 0;
+    for (let i = 0; i < neighbors.length; i++) {
+      const n = neighbors[i];
+      if (n === this) continue;
+      const dx = n.x - this.x;
+      const dy = n.y - this.y;
+      if (dx * dx + dy * dy < 3600) { // 60px radius
+        avgVx += n.vx;
+        avgVy += n.vy;
+        count++;
+      }
+    }
+    if (count > 0) {
+      this.vx += (avgVx / count - this.vx) * 0.005;
+      this.vy += (avgVy / count - this.vy) * 0.005;
+    }
   }
 
   update(dt) {
@@ -137,7 +161,7 @@ class Jellyfish {
   }
 
   update(dt) {
-    this.pulsePhase += dt * 0.003 * this.pulseSpeed;
+    this.pulsePhase += dt * 0.0018 * this.pulseSpeed;
     const pulse = (Math.sin(this.pulsePhase) + 1) / 2;
 
     if (this.startleTimer > 0) {
@@ -216,13 +240,16 @@ class Lanternfish {
     this.lureBlink = 0;
     this.startleTimer = 0;
     this.direction = this.vx > 0 ? 1 : -1;
+    this._lastWaveId = -1;
   }
 
-  startle(waveX, waveY) {
+  startle(wave) {
+    if (wave.id === this._lastWaveId) return;
+    this._lastWaveId = wave.id;
     this.startleTimer = 1000;
     this.lureBlink = 1000;
-    const dx = this.x - waveX;
-    const dy = this.y - waveY;
+    const dx = this.x - wave.x;
+    const dy = this.y - wave.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
     this.vx = (dx / dist) * 3;
     this.vy = (dy / dist) * 2;
@@ -309,7 +336,8 @@ function animate(now) {
 
   // Update organisms — check wave hits
   plankton.forEach(p => {
-    waves.forEach(w => { if (w.hits(p.x, p.y)) p.startle(w.x, w.y); });
+    waves.forEach(w => { if (w.hits(p.x, p.y)) p.startle(w); });
+    p.flock(plankton);
     p.update(dt);
     p.draw();
   });
@@ -321,7 +349,7 @@ function animate(now) {
   });
 
   lanternfish.forEach(l => {
-    waves.forEach(w => { if (w.hits(l.x, l.y)) l.startle(w.x, w.y); });
+    waves.forEach(w => { if (w.hits(l.x, l.y)) l.startle(w); });
     l.update(dt);
     l.draw();
   });

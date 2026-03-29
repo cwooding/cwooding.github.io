@@ -29,6 +29,7 @@ window.addEventListener('mousemove', e => {
 window.addEventListener('mouseleave', () => {
   pointer.x = -9999;
   pointer.y = -9999;
+  pointer.down = false;
 });
 window.addEventListener('mousedown', () => { pointer.down = true; });
 window.addEventListener('mouseup', () => { pointer.down = false; });
