@@ -42,7 +42,7 @@ window.addEventListener('touchmove', e => {
 window.addEventListener('touchend', () => {
   pointer.x = -9999;
   pointer.y = -9999;
-});
+}, { passive: true });
 
 // Scene switching — M key; forward other keys to current scene
 window.addEventListener('keydown', e => {
