@@ -1,6 +1,7 @@
 import * as particles from './scenes/particles.js';
+import * as deepSea from './scenes/deep-sea.js';
 
-const SCENES = [particles];
+const SCENES = [particles, deepSea];
 
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
