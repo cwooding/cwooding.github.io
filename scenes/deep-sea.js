@@ -77,6 +77,10 @@ class Plankton {
     this.brightness = 0.15;
     this.flashTimer = 0;
     this._lastWaveId = -1;
+    const hue = rand(0, 1);
+    this.r = Math.round(hue < 0.5 ? 0 : (hue - 0.5) * 2 * 100);
+    this.g = Math.round(200 + rand(0, 55));
+    this.b = Math.round(100 + hue * 155);
   }
 
   startle(wave) {
@@ -128,10 +132,10 @@ class Plankton {
   }
 
   draw() {
-    drawGlow(this.x, this.y, 12, 0, 255, 160, this.brightness * 0.3);
+    drawGlow(this.x, this.y, 14, this.r, this.g, this.b, this.brightness * 0.35);
     _ctx.beginPath();
     _ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    _ctx.fillStyle = `rgba(0, 255, 160, ${this.brightness})`;
+    _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${this.brightness})`;
     _ctx.fill();
   }
 }
@@ -149,6 +153,10 @@ class Jellyfish {
     this.brightness = 0.4;
     this.startled = false;
     this.startleTimer = 0;
+    const hue = rand(0, 1);
+    this.r = Math.round(200 + rand(0, 55));
+    this.g = Math.round(30 + hue * 80);
+    this.b = Math.round(140 + hue * 115);
   }
 
   startle() {
@@ -192,7 +200,7 @@ class Jellyfish {
     const w = this.bellWidth * contract;
     const h = this.bellHeight * contract;
 
-    drawGlow(this.x, this.y - h / 2, w * 1.5, 255, 48, 144, this.brightness * 0.25);
+    drawGlow(this.x, this.y - h / 2, w * 1.8, this.r, this.g, this.b, this.brightness * 0.3);
 
     _ctx.beginPath();
     _ctx.moveTo(this.x - w / 2, this.y);
@@ -206,7 +214,7 @@ class Jellyfish {
       this.x - w / 3, this.y + h * 0.15,
       this.x - w / 2, this.y
     );
-    _ctx.fillStyle = `rgba(255, 48, 144, ${this.brightness * 0.6})`;
+    _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${this.brightness * 0.7})`;
     _ctx.fill();
 
     for (let i = 0; i < 5; i++) {
@@ -219,7 +227,7 @@ class Jellyfish {
         const cx = tx + Math.sin(time * 0.002 + i * 1.5 + j * 0.8) * 6;
         _ctx.lineTo(cx, cy);
       }
-      _ctx.strokeStyle = `rgba(255, 48, 144, ${this.brightness * 0.35})`;
+      _ctx.strokeStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${this.brightness * 0.4})`;
       _ctx.lineWidth = 1;
       _ctx.stroke();
     }
@@ -241,6 +249,10 @@ class Lanternfish {
     this.startleTimer = 0;
     this.direction = this.vx > 0 ? 1 : -1;
     this._lastWaveId = -1;
+    const hue = rand(0, 1);
+    this.r = Math.round(220 + rand(0, 35));
+    this.g = Math.round(120 + hue * 100);
+    this.b = Math.round(30 + hue * 80);
   }
 
   startle(wave) {
@@ -295,11 +307,11 @@ class Lanternfish {
   draw() {
     const b = this.startleTimer > 0 ? 0.6 : 0.3;
 
-    drawGlow(this.x, this.y, 20, 255, 176, 64, b * 0.2);
+    drawGlow(this.x, this.y, 24, this.r, this.g, this.b, b * 0.25);
 
     _ctx.beginPath();
     _ctx.ellipse(this.x, this.y, this.bodyWidth, this.bodyHeight, 0, 0, Math.PI * 2);
-    _ctx.fillStyle = `rgba(255, 176, 64, ${b * 0.5})`;
+    _ctx.fillStyle = `rgba(${this.r}, ${this.g}, ${this.b}, ${b * 0.6})`;
     _ctx.fill();
 
     if (this.lureOn) {
